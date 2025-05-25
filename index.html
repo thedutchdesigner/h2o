@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,28 +7,89 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.css"/>
+
   <style>
     html, body, #map { height: 100%; margin: 0; padding: 0; }
+
     .control-button {
-      position: fixed; z-index: 10000; border: none; border-radius: 12px;
-      padding: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      cursor: pointer; font-size: 1.4em; width: 48px; height: 48px;
-      display: flex; align-items: center; justify-content: center;
-      transition: all 0.2s ease; backdrop-filter: blur(10px);
+      position: fixed;
+      z-index: 10000;
+      border: none;
+      border-radius: 50%;
+      padding: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      cursor: pointer;
+      font-size: 1.4em;
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(10px);
     }
-    #refresh-button { top: 20px; left: 20px; background: #fff; color: #007bff; }
-    #ar-button { top: 20px; right: 20px; background: #007bff; color: white; }
-    #locate-button { top: 80px; right: 20px; background: #fff; color: #007bff; }
+
+    #refresh-button {
+      top: 20px;
+      right: 20px;
+      background: #fff;
+      color: #000;
+    }
+
+    #ar-button {
+      top: 80px;
+      right: 20px;
+      background: #fff;
+      color: #000;
+    }
+
+    #locate-button {
+      top: 140px;
+      right: 20px;
+      background: #fff;
+      color: #000;
+    }
+
+    .search-box {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.9);
+      padding: 8px 16px;
+      border-radius: 20px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .custom-cluster-icon div {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      color: white;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
   <div id="map"></div>
+
   <button id="refresh-button" class="control-button">🔄</button>
   <button id="ar-button" class="control-button">📷</button>
   <button id="locate-button" class="control-button">📍</button>
 
+  <div class="search-box">
+    🔍 Water
+  </div>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
+
   <script>
     let map, markersCluster;
 
@@ -38,14 +98,24 @@
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors'
       }).addTo(map);
-      markersCluster = L.markerClusterGroup();
+      markersCluster = L.markerClusterGroup({
+        iconCreateFunction: function(cluster) {
+          const count = cluster.getChildCount();
+          let bg = count > 500 ? '#e74c3c' : count > 100 ? '#f1c40f' : '#2ecc71';
+          return L.divIcon({
+            html: `<div style="background: ${bg}; width: 40px; height: 40px;">${count}</div>`,
+            className: 'custom-cluster-icon',
+            iconSize: [40, 40]
+          });
+        }
+      });
       map.addLayer(markersCluster);
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(pos => {
           const lat = pos.coords.latitude;
           const lng = pos.coords.longitude;
           map.setView([lat, lng], 14);
-          L.marker([lat, lng]).addTo(map).bindPopup("You are here").openPopup();
+          L.marker([lat, lng]).addTo(map);
           fetchFountains(lat, lng);
         }, () => alert("Location access denied."));
       }
