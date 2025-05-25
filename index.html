@@ -93,38 +93,42 @@
   <script>
     let map, markersCluster;
 
-function initializeMap() {
-  map = L.map('map').setView([51.505, -0.09], 13); // Example default location
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    subdomains: ['a', 'b', 'c'],
-    attribution: '&copy; OpenStreetMap contributors'
-  }).addTo(map);
+    function initializeMap() {
+      map = L.map('map').setView([51.505, -0.09], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        subdomains: ['a', 'b', 'c'],
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
 
-  markersCluster = L.markerClusterGroup({
-    iconCreateFunction: function(cluster) {
-      const count = cluster.getChildCount();
-      let bg = count > 500 ? '#e74c3c' : count > 100 ? '#f1c40f' : '#2ecc71';
-      return L.divIcon({
-        html: `<div style="background: ${bg}; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; color: white; font-weight: bold;">${count}</div>`,
-        className: 'custom-cluster-icon',
-        iconSize: [40, 40]
+      markersCluster = L.markerClusterGroup({
+        iconCreateFunction: function(cluster) {
+          const count = cluster.getChildCount();
+          let bg = count > 500 ? '#e74c3c' : count > 100 ? '#f1c40f' : '#2ecc71';
+          return L.divIcon({
+            html: `<div style="background: ${bg}; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; color: white; font-weight: bold;">${count}</div>`,
+            className: 'custom-cluster-icon',
+            iconSize: [40, 40]
+          });
+        }
       });
+      map.addLayer(markersCluster);
+
+      map.on('moveend', () => {
+        const center = map.getCenter();
+        fetchFountains(center.lat, center.lng);
+      });
+
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(pos => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          map.setView([lat, lng], 14);
+          L.marker([lat, lng]).addTo(map);
+          fetchFountains(lat, lng);
+        }, () => alert("Location access denied."));
+      }
     }
-  });
-  map.addLayer(markersCluster);
-
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(pos => {
-      const lat = pos.coords.latitude;
-      const lng = pos.coords.longitude;
-      map.setView([lat, lng], 14);
-      L.marker([lat, lng]).addTo(map);
-      fetchFountains(lat, lng);
-    }, () => alert("Location access denied."));
-  }
-}
-
 
     async function fetchFountains(lat, lng) {
       const query = `[out:json];node["amenity"="drinking_water"](around:2000,${lat},${lng});out;`;
@@ -133,6 +137,7 @@ function initializeMap() {
         body: query
       });
       const data = await response.json();
+      markersCluster.clearLayers();
       data.elements.forEach(el => {
         L.marker([el.lat, el.lon]).bindPopup(el.tags.name || "Drinking Water").addTo(markersCluster);
       });
